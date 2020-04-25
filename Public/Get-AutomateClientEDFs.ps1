@@ -1,4 +1,4 @@
-function Get-AutomateClientExtraFields {
+function Get-AutomateClientEDFs {
     <#
   .SYNOPSIS
       Get Extra Data Fields (EDFs) for customer.
@@ -19,10 +19,16 @@ function Get-AutomateClientExtraFields {
       Author:         Kamil Procyszyn
       Creation Date:  2020-04-23
       Purpose/Change: Initial function development
+
+      Version:        1.1
+      Author:         Gavin Stone
+      Modified:       2020-04-25
+      Purpose/Change: Expanded values to accomodate for different value types
+
   .EXAMPLE
-      Get-AutomateClientExtraFields -ClientId 102
+      Get-AutomateClientEDFs -ClientId 102
   .EXAMPLE
-      Get-AutomateClientExtraFields -ClientId 102 -Title 'PatchingSchedule' -ValueOnly $true
+      Get-AutomateClientEDFs -ClientId 102 -Title 'PatchingSchedule' -ValueOnly $true
   #>
   [cmdletbinding(DefaultParameterSetName = 'Title')]
   param(
@@ -39,8 +45,8 @@ function Get-AutomateClientExtraFields {
       $ExtraFieldDefinitionId,
 
       [Parameter(Mandatory = $false)]
-      [bool]
-      $ValueOnly = $false
+      [switch]
+      $ValueOnly
   )
 
   $Params = @{
@@ -58,8 +64,13 @@ function Get-AutomateClientExtraFields {
       $EDFs = $EDFs | Where-Object { $_.ExtraFieldDefinitionId -eq $ExtraFieldDefinitionId }
   }
 
-  If ($PSBoundParameters.ContainsKey('ValueOnly')) {
-      $EDFs = $EDFs.TextFieldSettings.Value
+  If ($ValueOnly) {
+      switch ($EDFs.DisplayFormat.Name) {
+          "checkbox" { $EDFs = $EDFs.CheckboxSettings.IsChecked }
+          "textfield" { $EDFs = $EDFs.TextFieldSettings.value }
+          "dropdown" { $EDFs = $EDFS.DropDownSettings.SelectedValue}
+          Default {}
+      }
   }
 
   return $EDFs
