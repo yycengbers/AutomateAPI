@@ -14,12 +14,8 @@ function Get-AutomateClient {
         A comma separated list of fields that you want to order by finishing with either an asc or desc.
     .PARAMETER ClientName
         Client name to search for, uses wildcards so full client name is not needed
-    .PARAMETER LocationName
-        Location name to search for, uses wildcards so full location name is not needed
     .PARAMETER ClientID
         ClientID to search for, integer, -ClientID 1
-    .PARAMETER LocationID
-        LocationID to search for, integer, -LocationID 2
     .OUTPUTS
         Client objects
     .NOTES
@@ -27,6 +23,8 @@ function Get-AutomateClient {
         Author:         Gavin Stone and Andrea Mastellone
         Creation Date:  2019-03-19
         Purpose/Change: Initial script development
+        Modified Date:  2020-04-25
+        Purpose/Change: Remove location specific items - will expand in to a new cmdlet. Pulling by ID is currently bugged due to bug in actual API
     .EXAMPLE
         Get-AutomateClient -AllClients
     .EXAMPLE
@@ -34,7 +32,7 @@ function Get-AutomateClient {
     .EXAMPLE
         Get-AutomateClient -ClientName "Rancor"
     .EXAMPLE
-        Get-AutomateClient -Condition "(City != 'Baltimore')"
+        Get-AutomateClient -Condition "(City = 'Baltimore')"
     #>
         param (
             [Parameter(Mandatory = $false, Position = 0, ParameterSetName = "IndividualClient")]
@@ -64,14 +62,7 @@ function Get-AutomateClient {
 
             [Alias("Client")]
             [Parameter(Mandatory = $false, ParameterSetName = "CustomBuiltCondition")]
-            [string]$ClientName,
-
-            [Parameter(Mandatory = $false, ParameterSetName = "CustomBuiltCondition")]
-            [int]$LocationId,
-
-            [Alias("Location")]
-            [Parameter(Mandatory = $false, ParameterSetName = "CustomBuiltCondition")]
-            [string]$LocationName
+            [string]$ClientName
         )
 
         $ArrayOfConditions = @()
@@ -93,28 +84,7 @@ function Get-AutomateClient {
             $ArrayOfConditions += "(Name like '%$ClientName%')"
         }
 
-        if ($LocationName) {
-            $ArrayOfConditions += "(Location.Name like '%$LocationName%')"
-        }
-
-        if ($LocationID) {
-            $ArrayOfConditions += "(Location.Id = $LocationId)"
-        }
-
         $ClientFinalCondition = Get-ConditionsStacked -ArrayOfConditions $ArrayOfConditions
 
-        $Clients = Get-AutomateAPIGeneric -AllResults -Endpoint "clients" -Condition $ClientFinalCondition -IncludeFields $IncludeFields -ExcludeFields $ExcludeFields -OrderBy $OrderBy
-
-        $FinalResult = @()
-        foreach ($Client in $Clients) {
-            $ArrayOfConditions = @()
-            $ArrayOfConditions += "(Client.Id = '$($Client.Id)')"
-            $LocationFinalCondition = Get-ConditionsStacked -ArrayOfConditions $ArrayOfConditions
-            $Locations = Get-AutomateAPIGeneric -AllResults -Endpoint "locations" -Condition $LocationFinalCondition -IncludeFields $IncludeFields -ExcludeFields $ExcludeFields -OrderBy $OrderBy
-            $FinalClient = $Client
-            Add-Member -inputobject $FinalClient -NotePropertyName 'Locations' -NotePropertyValue $locations
-            $FinalResult += $FinalClient
-        }
-
-        return $FinalResult
+        return Get-AutomateAPIGeneric -AllResults -Endpoint "clients" -Condition $ClientFinalCondition -IncludeFields $IncludeFields -ExcludeFields $ExcludeFields -OrderBy $OrderBy
     }
